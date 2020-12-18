@@ -13,7 +13,7 @@ typedef struct my_semaphore
     // counting semaphore struct
     pthread_mutex_t mutex;
     pthread_cond_t cv;
-    int value;
+    volatile int value;
     int max_value;
 } sem_t;
 
@@ -134,7 +134,7 @@ void pick_right_fork(int pnum)
 void pick_sauce_bowls(int pnum)
 {
     // wait to acquire both the bowls
-    wait(&sauce_bowls);
+    wait (&sauce_bowls);
 
     sleep(TIME);    // eating
     printf("Philosopher %d eats using fork %d and fork %d\n", phil[pnum] + 1, LEFT + 1, RIGHT + 1);
