@@ -24,6 +24,7 @@ int wait(sem_t *sem)
 
     if (sem->value == 0)
     {
+        // return if no resource is available instead of blocking the thread
         pthread_mutex_unlock(&(sem->mutex));
         return 1;
     }
@@ -50,6 +51,7 @@ int signal_print_value(sem_t sem)
 
 void init(sem_t *sem, int value)
 {
+    // initializing semaphore
     sem->value = value;
     sem->max_value = value;
 }
@@ -58,11 +60,11 @@ void init(sem_t *sem, int value)
 #define RIGHT (pnum + 1) % num_phil
 #define TIME 1
 
-int num_phil;   // number of philosophers
-int *phil;
-sem_t mutex;
-sem_t *forks;
-sem_t sauce_bowls;
+int num_phil;           // number of philosophers
+int *phil;              // array of philosophers
+sem_t mutex;            // resource semaphore
+sem_t *forks;           // semaphores for forks 
+sem_t sauce_bowls;      // semaphore for sauce bowls
 
 void pick_left_fork(int pnum);
 void pick_right_fork(int pnum);
@@ -90,11 +92,13 @@ int main(int argc, char **argv)
     {
         init(&forks[i], 1);
         phil[i] = i;
+        // creating threads for each philosopher
         pthread_create(&phil_tid[i], NULL, phil_thread, &phil[i]);
     }
 
     for (int i = 0; i < num_phil; i++)
     {
+        // joining the threads for each philosopher
         pthread_join(phil_tid[i], NULL);
     }
 
@@ -120,23 +124,28 @@ void *phil_thread(void *num)
 
 void pick_left_fork(int pnum)
 {
+    // busy wait for the left fork
     while (wait(&mutex));
     while (wait(&forks[LEFT]));
 }
 
 void pick_right_fork(int pnum)
 {
+    // busy wait for the right fork
     while (wait(&forks[RIGHT]));
-    sleep(TIME);    // eating
 }
 
 void pick_sauce_bowls(int pnum)
 {
-    while(wait(&sauce_bowls));
+    // notifying that other philosophers can also acquire forks now
     signal(&mutex);
+    // busy wait for the sauce bowls
+    while(wait(&sauce_bowls));
 
+    sleep(TIME);    // eating
     printf("Philosopher %d eats using fork %d and fork %d\n", phil[pnum] + 1, LEFT + 1, RIGHT + 1);
 
+    // release all the resources
     signal(&forks[RIGHT]);
     signal(&forks[LEFT]);
     signal(&sauce_bowls);

@@ -21,6 +21,7 @@ void wait(sem_t *sem)
 {
     // blocking wait of semaphores
     pthread_mutex_lock(&(sem->mutex));
+    // block the thread if no resource is available
     while (sem->value == 0) pthread_cond_wait(&(sem->cv), &(sem->mutex));
     sem->value--;
     pthread_mutex_unlock(&(sem->mutex));
@@ -31,6 +32,7 @@ void signal(sem_t *sem)
     // signal of semaphores
     pthread_mutex_lock(&(sem->mutex));
     if (sem-> value < sem->max_value) sem->value++;
+    // wake up blocked thread when resource becomes available
     if (sem->value > 0) pthread_cond_signal(&(sem->cv));
     pthread_mutex_unlock(&(sem->mutex));
 }
@@ -44,6 +46,7 @@ int signal_print_value(sem_t sem)
 
 void init(sem_t *sem, int value)
 {
+    // initializing semaphore
     sem->value = value;
     sem->max_value = value;
 }
@@ -52,11 +55,11 @@ void init(sem_t *sem, int value)
 #define RIGHT (pnum + 1) % num_phil
 #define TIME 1
 
-int num_phil;   // number of philosophers
-int *phil;
-sem_t mutex;
-sem_t *forks;
-sem_t sauce_bowls;
+int num_phil;           // number of philosophers
+int *phil;              // array of philosophers
+sem_t mutex;            // resource semaphore
+sem_t *forks;           // semaphores for forks 
+sem_t sauce_bowls;      // semaphore for sauce bowls
 
 void pick_left_fork(int pnum);
 void pick_right_fork(int pnum);
@@ -84,11 +87,13 @@ int main(int argc, char **argv)
     {
         init(&forks[i], 1);
         phil[i] = i;
+        // creating threads for each philosopher
         pthread_create(&phil_tid[i], NULL, phil_thread, &phil[i]);
     }
 
     for (int i = 0; i < num_phil; i++)
     {
+        // joining the threads for each philosopher
         pthread_join(phil_tid[i], NULL);
     }
 
@@ -114,23 +119,28 @@ void *phil_thread(void *num)
 
 void pick_left_fork(int pnum)
 {
+    // wait to acquire left fork
     wait(&mutex);
     wait(&forks[LEFT]);
 }
 
 void pick_right_fork(int pnum)
 {
+    // wait to acquire right fork
     wait(&forks[RIGHT]);
 }
 
 void pick_sauce_bowls(int pnum)
 {
-    wait(&sauce_bowls);
+    // notifying that other philosophers can acquire forks now
     signal(&mutex);
+    // wait to acquire both the bowls
+    wait(&sauce_bowls);
 
     sleep(TIME);    // eating
     printf("Philosopher %d eats using fork %d and fork %d\n", phil[pnum] + 1, LEFT + 1, RIGHT + 1);
 
+    // release all the resources
     signal(&forks[RIGHT]);
     signal(&forks[LEFT]);
     signal(&sauce_bowls);
