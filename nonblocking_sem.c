@@ -42,11 +42,10 @@ void signal(sem_t *sem)
     pthread_mutex_unlock(&(sem->mutex));
 }
 
-int signal_print_value(sem_t sem)
+void signal_print_value(sem_t sem)
 {
     // print value of semaphore (for debugging)
     printf("%d\n", sem.value);
-    return sem.value;
 }
 
 void init(sem_t *sem, int value)
@@ -117,6 +116,8 @@ void *phil_thread(void *num)
 
         pick_left_fork(*i);
         pick_right_fork(*i);
+        // notifying that other philosophers can acquire forks now
+        signal(&mutex);
         pick_sauce_bowls(*i);
     }
     pthread_exit(0);
@@ -137,8 +138,6 @@ void pick_right_fork(int pnum)
 
 void pick_sauce_bowls(int pnum)
 {
-    // notifying that other philosophers can also acquire forks now
-    signal(&mutex);
     // busy wait for the sauce bowls
     while(wait(&sauce_bowls));
 
