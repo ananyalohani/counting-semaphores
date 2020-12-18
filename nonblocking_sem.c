@@ -14,16 +14,20 @@ typedef struct my_semaphore
     pthread_mutex_t mutex;
     pthread_cond_t cv;      // not really required for the non-blocking implementation
     int value;
+    int max_value;
 } sem_t;
 
 int wait(sem_t *sem)
 {
     // non-blocking wait of semaphores
-    pthread_mutex_lock(&(sem->mutex));
-    if (sem->value == 0) {
+    if(pthread_mutex_trylock(&(sem->mutex))) return 1;
+
+    if (sem->value == 0)
+    {
         pthread_mutex_unlock(&(sem->mutex));
         return 1;
     }
+
     sem->value--;
     pthread_mutex_unlock(&(sem->mutex));
     return 0;
@@ -33,7 +37,7 @@ void signal(sem_t *sem)
 {
     // signal of semaphores
     pthread_mutex_lock(&(sem->mutex));
-    sem->value++;
+    if (sem->value < sem->max_value) sem->value++;
     pthread_mutex_unlock(&(sem->mutex));
 }
 
@@ -47,6 +51,7 @@ int signal_print_value(sem_t sem)
 void init(sem_t *sem, int value)
 {
     sem->value = value;
+    sem->max_value = value;
 }
 
 #define LEFT pnum
@@ -115,13 +120,13 @@ void *phil_thread(void *num)
 
 void pick_left_fork(int pnum)
 {
-    while(wait(&mutex));
-    while(wait(&forks[LEFT]));
+    while (wait(&mutex));
+    while (wait(&forks[LEFT]));
 }
 
 void pick_right_fork(int pnum)
 {
-    while(wait(&forks[RIGHT]));
+    while (wait(&forks[RIGHT]));
     sleep(TIME);    // eating
 }
 

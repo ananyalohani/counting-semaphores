@@ -14,6 +14,7 @@ typedef struct my_semaphore
     pthread_mutex_t mutex;
     pthread_cond_t cv;
     int value;
+    int max_value;
 } sem_t;
 
 void wait(sem_t *sem)
@@ -29,7 +30,7 @@ void signal(sem_t *sem)
 {
     // signal of semaphores
     pthread_mutex_lock(&(sem->mutex));
-    sem->value++;
+    if (sem-> value < sem->max_value) sem->value++;
     if (sem->value > 0) pthread_cond_signal(&(sem->cv));
     pthread_mutex_unlock(&(sem->mutex));
 }
@@ -44,6 +45,7 @@ int signal_print_value(sem_t sem)
 void init(sem_t *sem, int value)
 {
     sem->value = value;
+    sem->max_value = value;
 }
 
 #define LEFT pnum
