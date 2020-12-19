@@ -48,6 +48,12 @@ void init(sem_t *sem, int value)
     // initializing semaphore
     sem->value = value;
     sem->max_value = value;
+    pthread_mutex_init(&(sem->mutex), NULL);
+}
+
+void destroy(sem_t *sem)
+{
+    pthread_mutex_destroy(&(sem->mutex));
 }
 
 #define LEFT pnum
@@ -96,6 +102,14 @@ int main(int argc, char **argv)
         pthread_join(phil_tid[i], NULL);
     }
 
+    destroy(&mutex);
+    destroy(&sauce_bowls);
+
+    for (int i = 0; i < num_phil; i++)
+    {
+        destroy(&forks[i]);
+    }
+    
     free(forks);
     free(phil);
     
